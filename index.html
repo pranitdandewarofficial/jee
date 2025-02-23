@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JEE Mastery Hub</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f4f4f4;
+        }
+        header {
+            text-align: center;
+            background-color: #007bff;
+            color: white;
+            padding: 10px;
+        }
+        section {
+            margin: 20px 0;
+            padding: 20px;
+            background-color: white;
+            border-radius: 5px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        h2 {
+            color: #333;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        #ai-chat textarea, #api-key-display {
+            width: 100%;
+            height: 100px;
+            margin: 10px 0;
+        }
+        #task-list {
+            list-style: none;
+            padding: 0;
+        }
+        #task-list li {
+            padding: 10px;
+            background-color: #e9ecef;
+            margin: 5px 0;
+            display: flex;
+            justify-content: space-between;
+        }
+        #progress-chart {
+            max-width: 500px;
+            margin: 20px auto;
+        }
+        #quiz-output p {
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>JEE Mastery Hub</h1>
+        <p>Your AI-Powered Path to IIT Success</p>
+    </header>
+
+    <section id="dashboard">
+        <h2>Dashboard</h2>
+        <div id="daily-tasks">
+            <h3>Today’s Tasks</h3>
+            <ul id="task-list"></ul>
+        </div>
+        <div id="progress-tracker">
+            <h3>Progress Tracker</h3>
+            <canvas id="progress-chart"></canvas>
+            <div id="progress-analysis"></div>
+        </div>
+        <div id="ai-chat">
+            <h3>Ask the AI</h3>
+            <textarea id="ai-input" placeholder="Ask me anything (e.g., 'Explain Kinematics')"></textarea>
+            <button onclick="getAIResponse()">Submit</button>
+            <div id="ai-response"></div>
+        </div>
+    </section>
+
+    <section id="study-plan">
+        <h2>Study Plan</h2>
+        <button onclick="generatePlan()">Generate 1-Year Plan</button>
+        <div id="plan-output"></div>
+    </section>
+
+    <section id="tracker">
+        <h2>Daily Tracker</h2>
+        <input type="text" id="task-input" placeholder="Add task (e.g., 'Solve 30 MCQs')">
+        <button onclick="addTask()">Add Task</button>
+    </section>
+
+    <section id="practice">
+        <h2>Practice Zone</h2>
+        <textarea id="api-key-display" readonly>Your Gemini API key is set! (AIzaSyBfU1SxWobrQpLd2U6UGjtzjD8LC2h-a7c)</textarea>
+        <button onclick="generateAIQuiz()">Generate AI Quiz</button>
+        <button onclick="loadManualQuiz()">Take Manual Quiz</button>
+        <div id="quiz-output"></div>
+    </section>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        // Sample Data
+        const syllabus = {
+            physics: ["Kinematics", "Newton’s Laws", "Thermodynamics", "Electrostatics"],
+            chemistry: ["Mole Concept", "Chemical Bonding", "Organic Chemistry", "Electrochemistry"],
+            maths: ["Quadratic Equations", "Trigonometry", "Calculus", "Vectors"]
+        };
+
+        const manualQuestions = {
+            physics: [
+                { q: "What is the formula for velocity?", a: "v = u + at" },
+                { q: "Define Newton’s 2nd Law", a: "F = ma" }
+            ],
+            chemistry: [
+                { q: "What is Avogadro’s number?", a: "6.022 x 10^23" },
+                { q: "What is a covalent bond?", a: "Sharing of electrons" }
+            ],
+            maths: [
+                { q: "Derivative of x^2?", a: "2x" },
+                { q: "sin(90°)?", a: "1" }
+            ]
+        };
+
+        let progressData = {
+            physics: 20,
+            chemistry: 30,
+            maths: 25,
+            completedTasks: 0,
+            quizAttempts: 0,
+            correctAnswers: 0
+        };
+
+        const apiKey = "AIzaSyBfU1SxWobrQpLd2U6UGjtzjD8LC2h-a7c";
+
+        // Load Saved Data
+        window.onload = () => {
+            const savedTasks = localStorage.getItem("tasks");
+            if (savedTasks) document.getElementById("task-list").innerHTML = savedTasks;
+            const savedProgress = JSON.parse(localStorage.getItem("progress"));
+            if (savedProgress) progressData = savedProgress;
+            updateProgressChart();
+            analyzeProgress();
+        };
+
+        // Add Task
+        function addTask() {
+            const taskInput = document.getElementById("task-input").value;
+            if (taskInput) {
+                const taskList = document.getElementById("task-list");
+                const li = document.createElement("li");
+                li.innerHTML = `${taskInput} <button onclick="completeTask(this)">Complete</button>`;
+                taskList.appendChild(li);
+                localStorage.setItem("tasks", taskList.innerHTML);
+                document.getElementById("task-input").value = "";
+            }
+        }
+
+        // Complete Task
+        function completeTask(button) {
+            const taskText = button.parentElement.textContent.replace("Complete", "").trim().toLowerCase();
+            if (taskText.includes("physics")) progressData.physics = Math.min(100, progressData.physics + 5);
+            else if (taskText.includes("chemistry")) progressData.chemistry = Math.min(100, progressData.chemistry + 5);
+            else if (taskText.includes("maths")) progressData.maths = Math.min(100, progressData.maths + 5);
+            progressData.completedTasks++;
+            button.parentElement.remove();
+            localStorage.setItem("tasks", document.getElementById("task-list").innerHTML);
+            localStorage.setItem("progress", JSON.stringify(progressData));
+            updateProgressChart();
+            analyzeProgress();
+        }
+
+        // Generate Study Plan
+        function generatePlan() {
+            const planOutput = document.getElementById("plan-output");
+            planOutput.innerHTML = `
+                <h3>1-Year Plan (Starting Feb 23, 2025)</h3>
+                <p><strong>Phase 1 (Mar-May):</strong> Foundation - Cover NCERT basics.</p>
+                <p><strong>Phase 2 (Jun-Aug):</strong> Advanced - Solve 100+ questions/topic.</p>
+                <p><strong>Phase 3 (Sep-Nov):</strong> Mocks - 1 test/day.</p>
+                <p><strong>Phase 4 (Dec-Feb):</strong> Revision - 50 mocks.</p>
+            `;
+        }
+
+        // Progress Chart
+        function updateProgressChart() {
+            const ctx = document.getElementById("progress-chart").getContext("2d");
+            if (window.progressChart) window.progressChart.destroy();
+            window.progressChart = new Chart(ctx, {
+                type: "bar",
+                data: {
+                    labels: ["Physics", "Chemistry", "Maths"],
+                    datasets: [{
+                        label: "% Completed",
+                        data: [progressData.physics, progressData.chemistry, progressData.maths],
+                        backgroundColor: ["#007bff", "#28a745", "#dc3545"]
+                    }]
+                },
+                options: {
+                    scales: { y: { beginAtZero: true, max: 100 } }
+                }
+            });
+        }
+
+        // AI Progress Analyzer
+        function analyzeProgress() {
+            const analysisDiv = document.getElementById("progress-analysis");
+            let analysis = "<h3>AI Progress Analysis</h3>";
+            const avgProgress = (progressData.physics + progressData.chemistry + progressData.maths) / 3;
+            const accuracy = progressData.quizAttempts > 0 ? (progressData.correctAnswers / progressData.quizAttempts * 100).toFixed(1) : 0;
+
+            analysis += `<p>Average Progress: ${avgProgress.toFixed(1)}%</p>`;
+            analysis += `<p>Tasks Completed: ${progressData.completedTasks}</p>`;
+            analysis += `<p>Quiz Accuracy: ${accuracy}% (${progressData.correctAnswers}/${progressData.quizAttempts})</p>`;
+
+            if (avgProgress < 50) analysis += "<p><strong>Suggestion:</strong> Increase daily task completion.</p>";
+            if (progressData.physics < progressData.chemistry && progressData.physics < progressData.maths)
+                analysis += "<p><strong>Weak Area:</strong> Physics needs focus!</p>";
+            else if (progressData.chemistry < progressData.physics && progressData.chemistry < progressData.maths)
+                analysis += "<p><strong>Weak Area:</strong> Chemistry needs focus!</p>";
+            else if (progressData.maths < progressData.physics && progressData.maths < progressData.chemistry)
+                analysis += "<p><strong>Weak Area:</strong> Maths needs focus!</p>";
+            if (accuracy < 70 && progressData.quizAttempts > 0)
+                analysis += "<p><strong>Tip:</strong> Review concepts to boost quiz accuracy.</p>";
+
+            analysisDiv.innerHTML = analysis;
+        }
+
+        // AI Quiz Creator with Gemini API
+        async function generateAIQuiz() {
+            const quizOutput = document.getElementById("quiz-output");
+            quizOutput.innerHTML = "<h3>AI-Generated Quiz (Gemini)</h3><p>Loading...</p>";
+
+            const subjects = ["physics", "chemistry", "maths"];
+            let quizHTML = "";
+            progressData.quizAttempts += 3; // 3 questions
+
+            for (const subject of subjects) {
+                const topic = syllabus[subject][Math.floor(Math.random() * syllabus[subject].length)];
+                try {
+                    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${apiKey}`, {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json"
+                        },
+                        body: JSON.stringify({
+                            contents: [{
+                                parts: [{
+                                    text: `Generate a JEE-level question and answer for ${subject} on the topic "${topic}". Format as: Question: [question] Answer: [answer]`
+                                }]
+                            }]
+                        })
+                    });
+
+                    if (!response.ok) throw new Error("API request failed: " + response.status);
+                    const data = await response.json();
+                    const text = data.candidates[0].content.parts[0].text;
+                    const [question, answer] = text.split("Answer:");
+                    quizHTML += `
+                        <p><strong>${subject.toUpperCase()}:</strong> ${question.replace("Question:", "").trim()}</p>
+                        <input type="text" id="answer-${subject}" placeholder="Type your answer">
+                        <button onclick='checkAIAnswer("${answer.trim()}", "${subject}")'>Submit Answer</button>
+                        <div id="result-${subject}"></div>
+                    `;
+                } catch (error) {
+                    quizHTML += `
+                        <p><strong>${subject.toUpperCase()}:</strong> Error generating question for ${topic}.</p>
+                        <p>(Error: ${error.message}. Check API key or host on a server like Netlify.)</p>
+                    `;
+                }
+            }
+
+            quizOutput.innerHTML = "<h3>AI-Generated Quiz (Gemini)</h3>" + quizHTML;
+            localStorage.setItem("progress", JSON.stringify(progressData));
+            analyzeProgress();
+        }
+
+        function checkAIAnswer(correctAnswer, subject) {
+            const userAnswer = document.getElementById(`answer-${subject}`).value.trim().toLowerCase();
+            const resultDiv = document.getElementById(`result-${subject}`);
+            const normalizedCorrect = correctAnswer.toLowerCase();
+
+            if (userAnswer === normalizedCorrect || userAnswer.includes(normalizedCorrect)) {
+                resultDiv.innerHTML = `<p><strong>Correct!</strong> Answer: ${correctAnswer}</p>`;
+                progressData.correctAnswers++;
+            } else {
+                resultDiv.innerHTML = `<p><strong>Incorrect.</strong> Correct Answer: ${correctAnswer}</p>`;
+            }
+
+            localStorage.setItem("progress", JSON.stringify(progressData));
+            analyzeProgress();
+        }
+
+        // Manual Quiz (Fallback)
+        let currentQuestion = 0;
+        function loadManualQuiz() {
+            const subjects = ["physics", "chemistry", "maths"];
+            const subject = subjects[currentQuestion % 3];
+            const quizOutput = document.getElementById("quiz-output");
+            quizOutput.innerHTML = `
+                <p><strong>${subject.toUpperCase()}:</strong> ${manualQuestions[subject][currentQuestion % 2].q}</p>
+                <button onclick='showManualAnswer(${currentQuestion % 2}, "${subject}")'>Show Answer</button>
+            `;
+            currentQuestion++;
+            progressData.quizAttempts++;
+            localStorage.setItem("progress", JSON.stringify(progressData));
+            analyzeProgress();
+        }
+
+        function showManualAnswer(index, subject) {
+            const quizOutput = document.getElementById("quiz-output");
+            quizOutput.innerHTML += `<p><strong>Answer:</strong> ${manualQuestions[subject][index].a}</p>`;
+            progressData.correctAnswers++;
+            localStorage.setItem("progress", JSON.stringify(progressData));
+            analyzeProgress();
+        }
+
+        // AI Response (Static)
+        function getAIResponse() {
+            const input = document.getElementById("ai-input").value.toLowerCase();
+            const responseDiv = document.getElementById("ai-response");
+            let response = "I’m here to help! Try asking about Physics, Chemistry, or Maths.";
+
+            if (input.includes("kinematics")) response = "Kinematics studies motion. Key formula: v = u + at.";
+            else if (input.includes("organic")) response = "Organic Chemistry tip: Focus on mechanisms like SN1/SN2!";
+            else if (input.includes("calculus")) response = "Calculus: Derivative of x^2 is 2x.";
+            else if (input.includes("plan")) response = "Stick to the 1-year plan: Basics → Advanced → Mocks → Revision!";
+            else if (input.includes("quiz")) response = "Click 'Generate AI Quiz' to use your Gemini key!";
+
+            responseDiv.textContent = response;
+        }
+    </script>
+</body>
+</html>
